@@ -1,0 +1,48 @@
+# Production: managed MySQL, image from a registry pinned by immutable tag, secrets created
+# out-of-band (External Secrets Operator / Sealed Secrets / Vault), TLS at the ingress.
+#
+# Prerequisite (one-off, or managed by your secrets operator):
+#   kubectl -n country-info create secret generic country-info-db \
+#     --from-literal=DB_USERNAME=... --from-literal=DB_PASSWORD=...
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: country-info
+
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: country-info-config
+    behavior: merge
+    literals:
+      - DB_HOST=countryinfo-db.prod.internal
+      - DB_URL=jdbc:mysql://countryinfo-db.prod.internal:3306/countryinfo?sslMode=REQUIRED&serverTimezone=UTC
+      - DB_POOL_MAX_SIZE=20
+
+patches:
+  - target: { kind: Deployment, name: country-info-service }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 500m, memory: 768Mi }
+          limits: { cpu: "2", memory: 1Gi }
+  - target: { kind: Ingress, name: country-info-service }
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: country-info.example.com
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts: [country-info.example.com]
+            secretName: country-info-tls
+      - op: add
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-prod
+
+images:
+  - name: country-info-service
+    newName: ghcr.io/lord-charles/country-info-service
+    newTag: 1.0.0

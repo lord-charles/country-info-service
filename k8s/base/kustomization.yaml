@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: country-info
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: country-info
+    includeSelectors: false
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - ingress.yaml
+
+images:
+  - name: country-info-service
+    newTag: 1.0.0

@@ -1,0 +1,9 @@
+# In-cluster MySQL for local / dev / demo clusters only.
+# Production should use a managed, replicated database (e.g. Cloud SQL, RDS, Azure Database
+# for MySQL) with backups and point-in-time recovery; see overlays/production.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - statefulset.yaml
+  - service.yaml

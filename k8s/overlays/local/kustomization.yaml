@@ -1,0 +1,49 @@
+# Local / demo environment (kind, minikube, Docker Desktop): in-cluster MySQL, 2 replicas,
+# smaller footprint, and the image loaded straight into the cluster (no registry).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: country-info
+
+resources:
+  - ../../base
+  - ../../mysql
+
+# DEV-ONLY credentials. Never commit real secrets; see overlays/production for the pattern.
+secretGenerator:
+  - name: country-info-db
+    literals:
+      - DB_USERNAME=countryinfo
+      - DB_PASSWORD=countryinfo-local
+      - MYSQL_ROOT_PASSWORD=root-local
+    options:
+      disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: country-info-config
+    behavior: merge
+    literals:
+      - TRACING_SAMPLING_PROBABILITY=1.0
+
+patches:
+  - target: { kind: Deployment, name: country-info-service }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 100m
+  - target: { kind: HorizontalPodAutoscaler, name: country-info-service }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 4
+
+images:
+  - name: country-info-service
+    newName: country-info-service
+    newTag: 1.0.0

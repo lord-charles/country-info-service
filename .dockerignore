@@ -1,0 +1,9 @@
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+k8s/
+docs/
+postman/
+*.md

@@ -1,0 +1,134 @@
+# All values can be overridden per environment with env vars (relaxed binding), e.g.
+#   DB_URL, DB_USERNAME, DB_PASSWORD, COUNTRYINFO_SOAP_ENDPOINT, LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs
+spring:
+  application:
+    name: country-info-service
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/countryinfo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:countryinfo}
+    password: ${DB_PASSWORD:countryinfo}
+    hikari:
+      pool-name: countryinfo-pool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 3000      # ms
+      max-lifetime: 1500000         # ms (25 min, below MySQL wait_timeout)
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # schema is owned by Flyway; Hibernate only verifies it
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        default_batch_fetch_size: 50
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  cache:
+    type: caffeine
+    cache-names: countryIsoCodes,fullCountryInfo
+    caffeine:
+      spec: maximumSize=10000,expireAfterWrite=12h,recordStats
+
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+
+countryinfo:
+  soap:
+    endpoint: ${COUNTRYINFO_SOAP_ENDPOINT:http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso}
+    connect-timeout: 2s
+    read-timeout: 4s
+    max-connections: 50
+
+resilience4j:
+  retry:
+    instances:
+      countryInfoSoap:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.ws.client.WebServiceIOException
+          - org.springframework.ws.client.WebServiceTransportException
+        ignore-exceptions:
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+          - org.springframework.ws.soap.client.SoapFaultClientException
+  circuitbreaker:
+    instances:
+      countryInfoSoap:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 80
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+  bulkhead:
+    instances:
+      countryInfoSoap:
+        max-concurrent-calls: 50
+        max-wait-duration: 100ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,circuitbreakers,caches,loggers,threaddump
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+      group:
+        # Readiness depends only on things this pod needs to serve traffic. The upstream SOAP
+        # service is deliberately excluded: if it is down, every replica would go unready at
+        # once and we would lose the stored-data fallback too.
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState
+  health:
+    circuitbreakers:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        countryinfo.soap.client: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    com.ncbaloop.countryinfo: INFO

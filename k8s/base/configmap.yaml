@@ -1,0 +1,19 @@
+# Non-secret configuration. Changing it does not require a rebuild; roll the pods with
+#   kubectl -n country-info rollout restart deployment/country-info-service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: country-info-config
+  labels:
+    app.kubernetes.io/name: country-info-service
+data:
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_URL: jdbc:mysql://mysql:3306/countryinfo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+  DB_POOL_MAX_SIZE: "10"
+  COUNTRYINFO_SOAP_ENDPOINT: http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso
+  # JSON (Elastic Common Schema) logs for Loki / ELK / Cloud Logging.
+  LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+  TRACING_SAMPLING_PROBABILITY: "0.1"
+  # To export traces, add (per environment) the OpenTelemetry collector endpoint, e.g.
+  # MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://otel-collector.observability:4318/v1/traces

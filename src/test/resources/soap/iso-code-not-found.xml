@@ -1,0 +1,3 @@
+<m:CountryISOCodeResponse xmlns:m="http://www.oorsprong.org/websamples.countryinfo">
+  <m:CountryISOCodeResult>No country found by that name</m:CountryISOCodeResult>
+</m:CountryISOCodeResponse>
