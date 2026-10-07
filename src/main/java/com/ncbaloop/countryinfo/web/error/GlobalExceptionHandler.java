@@ -26,6 +26,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.ncbaloop.countryinfo.exception.CountryNotFoundException;
+import com.ncbaloop.countryinfo.exception.InvalidSortException;
 import com.ncbaloop.countryinfo.exception.ResourceNotFoundException;
 import com.ncbaloop.countryinfo.exception.UpstreamServiceException;
 import com.ncbaloop.countryinfo.web.filter.RequestLoggingFilter;
@@ -81,6 +82,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		log.atWarn().setCause(ex).log("Data integrity violation");
 		return problem(HttpStatus.CONFLICT, "data-conflict", "Data conflict",
 				"The request conflicts with existing data (e.g. duplicate language ISO code).");
+	}
+
+	@ExceptionHandler(InvalidSortException.class)
+	ProblemDetail handleInvalidSort(InvalidSortException ex) {
+		return problem(HttpStatus.BAD_REQUEST, "invalid-sort", "Invalid sort parameter", ex.getMessage());
 	}
 
 	@ExceptionHandler(PropertyReferenceException.class)

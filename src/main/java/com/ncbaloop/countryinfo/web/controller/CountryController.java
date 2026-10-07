@@ -1,14 +1,15 @@
 package com.ncbaloop.countryinfo.web.controller;
 
 import java.net.URI;
+import java.util.Set;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.ncbaloop.countryinfo.exception.InvalidSortException;
 import com.ncbaloop.countryinfo.service.CountryInfoService;
 import com.ncbaloop.countryinfo.service.ImportResult;
 import com.ncbaloop.countryinfo.web.dto.CountryInfoResponse;
@@ -45,6 +47,10 @@ public class CountryController {
 
 	/** Response header telling clients the body came from our store because upstream was down. */
 	public static final String DATA_SOURCE_HEADER = "X-Data-Source";
+
+	/** Properties clients may sort by; anything else is rejected with 400 before reaching JPA. */
+	static final Set<String> SORTABLE_PROPERTIES = Set.of("id", "isoCode", "name", "capitalCity", "continentCode",
+			"currencyIsoCode", "createdAt", "updatedAt");
 
 	private final CountryInfoService countryInfoService;
 
@@ -72,10 +78,17 @@ public class CountryController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List stored countries (paginated)")
+	@Operation(summary = "List stored countries (paginated)",
+			description = "Query params: page (0-based), size (max 100), sort=property,asc|desc. Sortable: "
+					+ "id, isoCode, name, capitalCity, continentCode, currencyIsoCode, createdAt, updatedAt.")
+	@ApiResponse(responseCode = "400", description = "Invalid sort property")
 	public PageResponse<CountryInfoResponse> findAll(
-			@Parameter(description = "page (0-based), size (max 100), sort e.g. name,asc")
-			@PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+			@ParameterObject @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+		pageable.getSort().forEach(order -> {
+			if (!SORTABLE_PROPERTIES.contains(order.getProperty())) {
+				throw new InvalidSortException(order.getProperty(), SORTABLE_PROPERTIES);
+			}
+		});
 		return this.countryInfoService.findAll(pageable);
 	}
 

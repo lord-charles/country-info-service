@@ -153,6 +153,14 @@ class CountryControllerTest {
 	}
 
 	@Test
+	void listRejectsUnknownSortPropertyWith400() throws Exception {
+		// Swagger UI's placeholder value used to reach JPA and surface as a 500.
+		this.mockMvc.perform(get("/api/v1/countries").param("sort", "[\"string\"]"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("urn:problem-type:country-info:invalid-sort"));
+	}
+
+	@Test
 	void deleteReturns204() throws Exception {
 		this.mockMvc.perform(delete("/api/v1/countries/1")).andExpect(status().isNoContent());
 	}

@@ -19,7 +19,7 @@ POST {"name":"tanzania"}
 | Resilience | Resilience4j retry + circuit breaker + bulkhead, HTTP timeouts, Caffeine cache, stored-data fallback |
 | Observability | ECS JSON logs with trace/request ids, Prometheus metrics, OpenTelemetry tracing, health probes |
 | Delivery | Multi-stage Docker image, docker-compose, Kustomize manifests (base + overlays), GitHub Actions CI |
-| Tests | 42 tests: unit, MockMvc, real-HTTP SOAP transport, end-to-end with MySQL (Testcontainers) |
+| Tests | 43 tests: unit, MockMvc, real-HTTP SOAP transport, end-to-end with MySQL (Testcontainers) |
 
 **Docs:** [Architecture and design decisions](docs/ARCHITECTURE.md) ·
 [Kubernetes deployment guide](docs/DEPLOYMENT.md) ·
