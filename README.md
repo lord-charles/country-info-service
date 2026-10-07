@@ -32,6 +32,12 @@ POST {"name":"tanzania"}
 
 Base path `/api/v1/countries`. Interactive docs: `http://localhost:8080/swagger-ui.html`.
 
+![Swagger UI endpoints](docs/images/swagger-endpoints.png)
+
+A live import through Swagger UI (real data from the SOAP provider, `201 Created` with `Location` and `X-Request-ID`):
+
+<img src="docs/images/swagger-import-201.png" alt="POST /api/v1/countries returning 201" width="640">
+
 | Method | Path | Description | Success | Errors |
 |---|---|---|---|---|
 | `POST` | `/api/v1/countries` | Import a country by name (body `{"name":"kenya"}`) | `201` + `Location` (new), `200` (re-import) | `400`, `404`, `502`, `503`, `504` |
